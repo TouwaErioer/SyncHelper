@@ -5,8 +5,8 @@ SyncHelper
 Application for keeping Android and Windows notifications synchronized based on [NotificationListenerService-Example](https://github.com/kpbird/NotificationListenerService-Example/tree/master/NLSExample/src/main) and Socket communication
 
 ## Use
-* Download and install [SyncHelper_releases.apk](https://github.com/TouwaErioer/SyncHelper/releases) Android Application
-* Download and run [SyncHelper_server.exe](https://github.com/TouwaErioer/SyncHelper/releases) Server on Windows
+* Download and install [SyncHelper-releases.apk](https://github.com/TouwaErioer/SyncHelper/releases) Android Application
+* Download and run [SyncHelper-server.exe](https://github.com/TouwaErioer/SyncHelper/releases) Server on Windows
 * Open cmd and type `ipconfig`, enter the ipv4 address in the input box and click save to connect to the computer
 
 ## Useful Methods
