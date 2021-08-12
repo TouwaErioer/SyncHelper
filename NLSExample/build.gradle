@@ -28,6 +28,10 @@ android {
         minSdkVersion 18
         targetSdkVersion 18
     }
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
 }
 
 allprojects {
