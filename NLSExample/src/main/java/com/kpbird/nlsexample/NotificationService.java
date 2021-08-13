@@ -23,35 +23,13 @@ public class NotificationService extends NotificationListenerService {
     @Override
     public void onCreate() {
         super.onCreate();
-        Context context = getApplicationContext();
-        final String ip = new SharedHelper(context).read();
-        if (ip.equals("")) {
-            Toast.makeText(context, "请输入IP", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        try {
-            buildSocketClient(ip);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (client != null) {
-            try {
-                client.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        buildSocket();
     }
 
     @Override
     public void onNotificationPosted(final StatusBarNotification sbn) {
         if (client == null) {
-            return;
+            buildSocket();
         }
         Thread thread = new Thread(new Runnable() {
             @Override
@@ -80,20 +58,18 @@ public class NotificationService extends NotificationListenerService {
         Log.i(TAG, "ID :" + sbn.getId() + "\t" + sbn.getNotification().tickerText + "\t" + sbn.getPackageName());
     }
 
-    private void buildSocketClient(final String ip) throws IOException {
+    private void buildSocket() {
+        Context context = getApplicationContext();
+        final String ip = new SharedHelper(context).read();
+        if (ip.equals("")) {
+            Toast.makeText(context, "请输入IP", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        client = SocketBuilder.builder(ip);
         if (client == null) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        client = new Socket(ip, 1208);
-                        send("success");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        send("failure");
-                    }
-                }
-            }).start();
+            send("success");
+        } else {
+            send("failure");
         }
     }
 

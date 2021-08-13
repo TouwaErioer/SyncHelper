@@ -24,18 +24,6 @@ public class ClipboardActivity extends AppCompatActivity {
         bindView();
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (client != null) {
-            try {
-                client.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     private void bindView() {
         final EditText contentEditText = (EditText) findViewById(R.id.content);
         Button sendBtn = (Button) findViewById(R.id.send);
@@ -65,15 +53,6 @@ public class ClipboardActivity extends AppCompatActivity {
     public void buildSocket() {
         Context context = getApplicationContext();
         final String ip = new SharedHelper(context).read();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    client = new Socket(ip, 1208);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
+        client = SocketBuilder.builder(ip);
     }
 }

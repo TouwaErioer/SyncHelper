@@ -88,6 +88,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(locationReceiver);
+        SocketBuilder.close();
     }
 
     public void buttonClicked(View v) {
