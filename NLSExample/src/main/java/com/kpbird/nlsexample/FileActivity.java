@@ -18,6 +18,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -105,6 +108,10 @@ public class FileActivity extends AppCompatActivity {
                 }
                 File file = new File(path);
                 try {
+                    JSONObject jsonObject = new JSONObject();
+                    jsonObject.put("Type", "File");
+                    jsonObject.put("Title", file.getName());
+                    client.getOutputStream().write(jsonObject.toString().getBytes());
                     fis = new FileInputStream(file);
                     dos = new DataOutputStream(client.getOutputStream());
                     byte[] bytes = new byte[1024];
@@ -113,17 +120,17 @@ public class FileActivity extends AppCompatActivity {
                         dos.write(bytes, 0, length);
                         dos.flush();
                     }
-                    sendToast("发送成功");
                     //todo 发送完毕关闭连接
                     sendBroadcast(0);
-                } catch (IOException e) {
+                    sendToast("发送成功");
+                } catch (IOException | JSONException e) {
                     e.printStackTrace();
                     sendToast("发送失败");
                 } finally {
                     try {
                         fis.close();
                         dos.close();
-                        client.close();
+                        SocketBuilder.close();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -150,6 +157,7 @@ public class FileActivity extends AppCompatActivity {
     private void sendToast(String content){
         Looper.prepare();
         Toast.makeText(getApplicationContext(), content, Toast.LENGTH_SHORT).show();
+        finish();
         Looper.loop();
     }
 
