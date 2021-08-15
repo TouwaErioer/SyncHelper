@@ -46,7 +46,7 @@ public class MainActivity extends Activity {
     private Button file;
     private Receiver receiver;
     public final static String broadcastName = "com.kpbird.nlsexample.RECEIVER";
-    private int status = 0;
+    private int status = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -200,9 +200,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        radioGroup.removeAllViews();
-        initRadioButton();
-        client = SocketBuilder.client;
         if(status == -1){
             tip.setText("状态：网络未打开");
             connect.setEnabled(false);
@@ -214,7 +211,13 @@ public class MainActivity extends Activity {
         }else if(status == 1){
             tip.setText("状态：已连接");
             buttonEnabled(true);
+        }else{
+            tip.setText("状态：未连接");
+            buttonEnabled(false);
         }
+        radioGroup.removeAllViews();
+        initRadioButton();
+        client = SocketBuilder.client;
     }
 
     @Override

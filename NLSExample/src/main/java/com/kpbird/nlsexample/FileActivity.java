@@ -9,6 +9,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Looper;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
@@ -22,13 +23,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.concurrent.Callable;
 
 public class FileActivity extends AppCompatActivity {
 
     private Socket client;
     private FileInputStream fis;
     private DataOutputStream dos;
-    private boolean status = false;
     private static final String qqFilePath = "/sdcard/Android/data/com.tencent.mobileqq/Tencent/QQfile_recv/";
     private static final String weixinFilePath = "/sdcard/Download/";
 
@@ -112,11 +113,12 @@ public class FileActivity extends AppCompatActivity {
                         dos.write(bytes, 0, length);
                         dos.flush();
                     }
+                    sendToast("发送成功");
                     //todo 发送完毕关闭连接
-                    status = true;
                     sendBroadcast(0);
                 } catch (IOException e) {
                     e.printStackTrace();
+                    sendToast("发送失败");
                 } finally {
                     try {
                         fis.close();
@@ -142,9 +144,13 @@ public class FileActivity extends AppCompatActivity {
             //4.4以后
             path = getPath(this, uri);
             sendFile(path);
-            String tip = status ? "发送成功" : "发送失败";
-            Toast.makeText(getApplicationContext(), tip, Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void sendToast(String content){
+        Looper.prepare();
+        Toast.makeText(getApplicationContext(), content, Toast.LENGTH_SHORT).show();
+        Looper.loop();
     }
 
     /**
