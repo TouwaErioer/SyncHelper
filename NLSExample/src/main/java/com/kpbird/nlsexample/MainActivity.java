@@ -1,78 +1,135 @@
 package com.kpbird.nlsexample;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Entity;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.service.notification.NotificationListenerService;
 import android.support.v4.app.NotificationCompat;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.net.Socket;
 import java.util.Map;
 import java.util.Objects;
 
 public class MainActivity extends Activity {
 
-    private EditText ipEditText;
     private Button btnCreateNotify;
     private SharedHelper sharedHelper;
-    private LocationReceiver locationReceiver;
     private TextView tip;
     private Button clipboardBtn;
-    private TextView help;
+    private Context context;
+    private RadioGroup radioGroup;
+    private Button connect;
+    private Button close;
+    private Socket client;
+    private Button file;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Context context = getApplicationContext();
+        context = getApplicationContext();
+        sharedHelper = new SharedHelper(context);
+        checkAccessSetting();
+        bindViews();
+        initRadioButton();
+        reBind();
+    }
+
+    private void initRadioButton() {
+        Map<String, ?> map = sharedHelper.list();
+        for (Map.Entry<String, ?> entity : map.entrySet()) {
+            final String alias = entity.getKey();
+            final String ip = (String) entity.getValue();
+            final RadioButton radioButton = new RadioButton(this);
+            radioButton.setText(alias);
+            radioButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    SocketBuilder.SelectHost(ip);
+                    if (!isWifiConnect()) {
+                        tip.setText("状态：WIFI未打开");
+                        connect.setEnabled(false);
+                        buttonEnabled(false);
+                    } else {
+                        connect.setEnabled(true);
+                    }
+                }
+            });
+            radioButton.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("提示框")
+                            .setMessage("确认删除" + alias)
+                            .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            }).setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    radioGroup.removeView(radioButton);
+                                    sharedHelper.remove(alias);
+                                }
+                            }).create();
+                    dialog.show();
+                    return true;
+                }
+            });
+            radioGroup.addView(radioButton);
+        }
+    }
+
+    private void gotoAddHostActivity() {
+        Intent intent = new Intent(MainActivity.this, AddHostActivity.class);
+        startActivity(intent);
+    }
+
+    private void checkAccessSetting() {
         if (!notificationListenerEnable()) {
             Toast.makeText(context, "请授予通知使用权", Toast.LENGTH_SHORT).show();
             gotoNotificationAccessSetting(context);
         }
-        sharedHelper = new SharedHelper(context);
-        bindViews();
-        String ip = sharedHelper.read();
-        ipEditText.setText(ip);
-        if (ip.equals("")) {
-            btnCreateNotify.setEnabled(false);
-            clipboardBtn.setEnabled(false);
-        } else {
-            help.setText("");
-        }
-        locationReceiver = new LocationReceiver();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("location");
-        registerReceiver(locationReceiver, filter);
     }
 
     private void bindViews() {
-        ipEditText = (EditText) findViewById(R.id.host);
-        Button saveBtn = (Button) findViewById(R.id.save);
+        Button insertBtn = (Button) findViewById(R.id.insert);
         btnCreateNotify = (Button) findViewById(R.id.btnCreateNotify);
         tip = (TextView) findViewById(R.id.tip);
         clipboardBtn = (Button) findViewById(R.id.clipboard);
-        help = (TextView) findViewById(R.id.help);
-        saveBtn.setOnClickListener(new View.OnClickListener() {
+        radioGroup = (RadioGroup) findViewById(R.id.radioGroup);
+        connect = (Button) findViewById(R.id.connect);
+        close = (Button) findViewById(R.id.close);
+        file = (Button) findViewById(R.id.file);
+        connect.setEnabled(false);
+        buttonEnabled(false);
+        insertBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String ip = ipEditText.getText().toString();
-                if (sharedHelper.save(ip)) {
-                    btnCreateNotify.setEnabled(true);
-                    clipboardBtn.setEnabled(true);
-                    help.setText("");
-                }
+                gotoAddHostActivity();
             }
         });
         clipboardBtn.setOnClickListener(new View.OnClickListener() {
@@ -82,13 +139,77 @@ public class MainActivity extends Activity {
                 startActivity(intent);
             }
         });
+        connect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        client = SocketBuilder.builder();
+                    }
+                });
+                thread.start();
+                try {
+                    thread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if (client != null) {
+                    tip.setText("状态：已连接");
+                    buttonEnabled(true);
+                } else {
+                    Toast.makeText(context, "连接超时，请检查Host或服务端", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        close.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (SocketBuilder.close()) {
+                    tip.setText("状态：未连接");
+                    connect.setEnabled(true);
+                    buttonEnabled(false);
+                }
+            }
+        });
+        file.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, FileActivity.class);
+                startActivity(intent);
+            }
+        });
+    }
+
+    private void buttonEnabled(boolean enabled) {
+        btnCreateNotify.setEnabled(enabled);
+        clipboardBtn.setEnabled(enabled);
+        close.setEnabled(enabled);
+        file.setEnabled(enabled);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        radioGroup.removeAllViews();
+        initRadioButton();
+        client = SocketBuilder.client;
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(locationReceiver);
         SocketBuilder.close();
+        unBind();
+    }
+
+    public void unBind() {
+        NotificationService.notificationService.requestUnbind();
+    }
+
+    public void reBind(){
+        ComponentName componentName = new ComponentName(this,NotificationService.class);
+        NotificationListenerService.requestRebind(componentName);
     }
 
     public void buttonClicked(View v) {
@@ -105,18 +226,6 @@ public class MainActivity extends Activity {
                 notification.setSmallIcon(R.drawable.ic_launcher);
                 notification.setAutoCancel(true);
                 nManager.notify((int) System.currentTimeMillis(), notification.build());
-            }
-        }
-    }
-
-    public class LocationReceiver extends BroadcastReceiver {
-        //必须要重载的方法，用来监听是否有广播发送
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String status = (String) Objects.requireNonNull(intent.getExtras()).get("status");
-            assert status != null;
-            if (status.equals("success")) {
-                tip.setText("状态：已连接");
             }
         }
     }
@@ -154,5 +263,12 @@ public class MainActivity extends Activity {
             }
             return false;
         }
+    }
+
+    //判断wifi是否连接
+    public boolean isWifiConnect() {
+        ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo mWifiInfo = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+        return mWifiInfo.isConnected();
     }
 }
