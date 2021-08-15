@@ -3,7 +3,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/MyApplication/NotificationListenerService-Example/NLSExample/src/main/res/layout/activity_add_host.xml" value="0.1" />
         <entry key="..\:/MyApplication/NotificationListenerService-Example/NLSExample/src/main/res/layout/activity_clipboard.xml" value="0.103125" />
+        <entry key="..\:/MyApplication/NotificationListenerService-Example/NLSExample/src/main/res/layout/activity_file.xml" value="0.129981884057971" />
         <entry key="..\:/MyApplication/NotificationListenerService-Example/NLSExample/src/main/res/layout/activity_main.xml" value="0.1" />
       </map>
     </option>
