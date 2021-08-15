@@ -26,6 +26,12 @@ public class SocketBuilder {
                     try {
                         client = new Socket();
                         client.connect(new InetSocketAddress(ip, 1208), 2 * 1000);
+                        byte[] buf = new byte[2048];
+                        int input = client.getInputStream().read(buf);
+                        String result = new String(buf, 0, input);
+                        if (result.equals("reject")) {
+                            close();
+                        }
                     } catch (SocketTimeoutException e) {
                         return null;
                     } catch (IOException e) {

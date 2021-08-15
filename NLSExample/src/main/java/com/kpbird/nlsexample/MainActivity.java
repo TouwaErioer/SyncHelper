@@ -167,7 +167,7 @@ public class MainActivity extends Activity {
                     tip.setText("状态：已连接");
                     buttonEnabled(true);
                 } else {
-                    Toast.makeText(context, "连接超时，请检查Host或服务端", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "连接超时或服务端拒绝连接，请检查Host或服务端", Toast.LENGTH_SHORT).show();
                 }
             }
         });
