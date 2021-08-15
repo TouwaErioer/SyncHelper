@@ -15,23 +15,22 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 public class FileActivity extends AppCompatActivity {
 
-    private Button selectFile;
-    private Button sendByQQ;
-    private Button sendByWeiXin;
     private Socket client;
     private FileInputStream fis;
     private DataOutputStream dos;
+    private boolean status = false;
+    private static final String qqFilePath = "/sdcard/Android/data/com.tencent.mobileqq/Tencent/QQfile_recv/";
+    private static final String weixinFilePath = "/sdcard/Download/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,9 +41,9 @@ public class FileActivity extends AppCompatActivity {
     }
 
     private void bindView() {
-        selectFile = (Button) findViewById(R.id.selectFile);
-        sendByQQ = (Button) findViewById(R.id.sendByQQ);
-        sendByWeiXin = (Button) findViewById(R.id.sendByWeiXin);
+        Button selectFile = (Button) findViewById(R.id.selectFile);
+        Button sendByQQ = (Button) findViewById(R.id.sendByQQ);
+        Button sendByWeiXin = (Button) findViewById(R.id.sendByWeiXin);
         selectFile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -54,16 +53,22 @@ public class FileActivity extends AppCompatActivity {
         sendByQQ.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                sendFile(getFilesAllName("/sdcard/Android/data/com.tencent.mobileqq/Tencent/QQfile_recv/"));
+                sendFile(getFilesAllName(qqFilePath));
 
             }
         });
         sendByWeiXin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                sendFile(getFilesAllName("/sdcard/Download/"));
+                sendFile(getFilesAllName(weixinFilePath));
             }
         });
+    }
+
+    private void sendBroadcast(int status) {
+        Intent intent = new Intent(MainActivity.broadcastName);
+        intent.putExtra("status", status);
+        sendBroadcast(intent);
     }
 
     public static String getFilesAllName(String path) {
@@ -107,12 +112,16 @@ public class FileActivity extends AppCompatActivity {
                         dos.write(bytes, 0, length);
                         dos.flush();
                     }
+                    //todo 发送完毕关闭连接
+                    status = true;
+                    sendBroadcast(0);
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
                     try {
                         fis.close();
                         dos.close();
+                        client.close();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -133,6 +142,8 @@ public class FileActivity extends AppCompatActivity {
             //4.4以后
             path = getPath(this, uri);
             sendFile(path);
+            String tip = status ? "发送成功" : "发送失败";
+            Toast.makeText(getApplicationContext(), tip, Toast.LENGTH_SHORT).show();
         }
     }
 

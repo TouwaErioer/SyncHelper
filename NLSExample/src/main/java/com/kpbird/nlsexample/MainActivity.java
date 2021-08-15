@@ -44,6 +44,9 @@ public class MainActivity extends Activity {
     private Button close;
     private Socket client;
     private Button file;
+    private Receiver receiver;
+    public final static String broadcastName = "com.kpbird.nlsexample.RECEIVER";
+    private int status = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +58,14 @@ public class MainActivity extends Activity {
         bindViews();
         initRadioButton();
         reBind();
+        registerBroadcast();
+    }
+
+    private void registerBroadcast() {
+        receiver = new Receiver();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(broadcastName);
+        registerReceiver(receiver, intentFilter);
     }
 
     private void initRadioButton() {
@@ -69,9 +80,7 @@ public class MainActivity extends Activity {
                 public void onClick(View v) {
                     SocketBuilder.SelectHost(ip);
                     if (!isWifiConnect()) {
-                        tip.setText("状态：WIFI未打开");
-                        connect.setEnabled(false);
-                        buttonEnabled(false);
+                        sendBroadcast(-1);
                     } else {
                         connect.setEnabled(true);
                     }
@@ -194,6 +203,18 @@ public class MainActivity extends Activity {
         radioGroup.removeAllViews();
         initRadioButton();
         client = SocketBuilder.client;
+        if(status == -1){
+            tip.setText("状态：网络未打开");
+            connect.setEnabled(false);
+            buttonEnabled(false);
+        }else if(status == 0){
+            tip.setText("状态：未连接");
+            connect.setEnabled(true);
+            buttonEnabled(false);
+        }else if(status == 1){
+            tip.setText("状态：已连接");
+            buttonEnabled(true);
+        }
     }
 
     @Override
@@ -201,14 +222,15 @@ public class MainActivity extends Activity {
         super.onDestroy();
         SocketBuilder.close();
         unBind();
+        unregisterReceiver(receiver);
     }
 
     public void unBind() {
         NotificationService.notificationService.requestUnbind();
     }
 
-    public void reBind(){
-        ComponentName componentName = new ComponentName(this,NotificationService.class);
+    public void reBind() {
+        ComponentName componentName = new ComponentName(this, NotificationService.class);
         NotificationListenerService.requestRebind(componentName);
     }
 
@@ -270,5 +292,19 @@ public class MainActivity extends Activity {
         ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo mWifiInfo = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
         return mWifiInfo.isConnected();
+    }
+
+    class Receiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            status = intent.getIntExtra("status", 0);
+        }
+    }
+
+    private void sendBroadcast(int status) {
+        Intent intent = new Intent(broadcastName);
+        intent.putExtra("status", status);
+        sendBroadcast(intent);
     }
 }
