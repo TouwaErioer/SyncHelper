@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/atotto/clipboard"
@@ -21,20 +22,19 @@ func connHandler(c net.Conn) {
 	if c == nil {
 		return
 	}
-
+	fmt.Println(c.RemoteAddr())
 	buf := make([]byte, 4096)
 
+Listener:
 	for {
-		cnt, err := c.Read(buf)
-		if err != nil || cnt == 0 {
+		temp, err := c.Read(buf)
+		if err != nil {
 			c.Close()
 			break
 		}
-
-		str := strings.TrimSpace(string(buf[0:cnt]))
-
-		fmt.Println(c.RemoteAddr())
 		var data Notify
+		str := strings.TrimSpace(string(buf[0:temp]))
+		fmt.Println(len(str))
 		json.Unmarshal([]byte(str), &data)
 		switch data.Type {
 		case "Notification":
@@ -49,8 +49,21 @@ func connHandler(c net.Conn) {
 			}
 		case "Clipboard":
 			clipboard.WriteAll(data.Content)
-		default:
-			fmt.Print(str)
+		case "File":
+			file, err := os.Create(data.Title)
+			if err != nil {
+				fmt.Printf("create file error:%s\n", err)
+				break
+			}
+			defer file.Close()
+			for {
+				cnt, err := c.Read(buf)
+				if err != nil || cnt == 0 {
+					c.Close()
+					goto Listener
+				}
+				file.Write(buf[:cnt])
+			}
 		}
 	}
 
