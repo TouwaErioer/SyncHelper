@@ -29,6 +29,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -47,13 +49,15 @@ public class MainActivity extends Activity {
     private Receiver receiver;
     public final static String broadcastName = "com.kpbird.nlsexample.RECEIVER";
     private int status = 2;
+    private SharedHelper radioSharedHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         context = getApplicationContext();
-        sharedHelper = new SharedHelper(context);
+        sharedHelper = new SharedHelper(context, "data");
+        radioSharedHelper = new SharedHelper(context, "radio");
         checkAccessSetting();
         bindViews();
         initRadioButton();
@@ -70,45 +74,52 @@ public class MainActivity extends Activity {
 
     private void initRadioButton() {
         Map<String, ?> map = sharedHelper.list();
+        List<String> aliasList = new ArrayList<>();
+        for (int i = 0; i < radioGroup.getChildCount(); i++) {
+            aliasList.add((String) ((RadioButton) radioGroup.getChildAt(i)).getText());
+        }
         for (Map.Entry<String, ?> entity : map.entrySet()) {
             final String alias = entity.getKey();
             final String ip = (String) entity.getValue();
             final RadioButton radioButton = new RadioButton(this);
-            radioButton.setText(alias);
-            radioButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    SocketBuilder.SelectHost(ip);
-                    if (!isWifiConnect()) {
-                        sendBroadcast(-1);
-                    } else {
-                        connect.setEnabled(true);
+            if (!aliasList.contains(alias)) {
+                radioButton.setText(alias);
+                radioButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        SocketBuilder.SelectHost(ip);
+                        if (!isWifiConnect()) {
+                            sendBroadcast(-1);
+                        } else {
+                            connect.setEnabled(true);
+                            radioSharedHelper.save("selected", String.valueOf(radioButton.getId()));
+                        }
                     }
-                }
-            });
-            radioButton.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View v) {
-                    AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
-                            .setTitle("提示框")
-                            .setMessage("确认删除" + alias)
-                            .setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-                                }
-                            }).setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    radioGroup.removeView(radioButton);
-                                    sharedHelper.remove(alias);
-                                }
-                            }).create();
-                    dialog.show();
-                    return true;
-                }
-            });
-            radioGroup.addView(radioButton);
+                });
+                radioButton.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View v) {
+                        AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
+                                .setTitle("提示框")
+                                .setMessage("确认删除" + alias)
+                                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        dialog.dismiss();
+                                    }
+                                }).setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        radioGroup.removeView(radioButton);
+                                        sharedHelper.remove(alias);
+                                    }
+                                }).create();
+                        dialog.show();
+                        return true;
+                    }
+                });
+                radioGroup.addView(radioButton);
+            }
         }
     }
 
@@ -219,16 +230,21 @@ public class MainActivity extends Activity {
             tip.setText("状态：未连接");
             buttonEnabled(false);
         }
-        radioGroup.removeAllViews();
         initRadioButton();
+        String checked = radioSharedHelper.read("selected");
+        if (!checked.equals("")) {
+            int radioButtonId = Integer.parseInt(checked);
+            radioGroup.check(radioButtonId);
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        radioSharedHelper.remove("selected");
         SocketBuilder.close();
-        unBind();
         unregisterReceiver(receiver);
+        unBind();
     }
 
     public void unBind() {

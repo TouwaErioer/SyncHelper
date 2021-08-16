@@ -19,7 +19,7 @@ public class AddHostActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_host);
         Context context = getApplicationContext();
-        sharedHelper = new SharedHelper(context);
+        sharedHelper = new SharedHelper(context, "data");
         bindView();
     }
 
