@@ -200,24 +200,27 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if(status == -1){
+        client = SocketBuilder.client;
+        if (client != null && !client.isClosed()) {
+            status = 1;
+        }
+        if (status == -1) {
             tip.setText("状态：网络未打开");
             connect.setEnabled(false);
             buttonEnabled(false);
-        }else if(status == 0){
+        } else if (status == 0) {
             tip.setText("状态：未连接");
             connect.setEnabled(true);
             buttonEnabled(false);
-        }else if(status == 1){
+        } else if (status == 1) {
             tip.setText("状态：已连接");
             buttonEnabled(true);
-        }else{
+        } else {
             tip.setText("状态：未连接");
             buttonEnabled(false);
         }
         radioGroup.removeAllViews();
         initRadioButton();
-        client = SocketBuilder.client;
     }
 
     @Override
